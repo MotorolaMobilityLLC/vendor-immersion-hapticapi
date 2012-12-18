@@ -1,15 +1,35 @@
 /*
 ** =============================================================================
-** Copyright (C) 2010-2011  Immersion Corporation. All rights reserved.
-**                          Immersion Corporation confidential and proprietary.
+** Copyright (C) 2010-2012  Immersion Corporation.
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+**
+** File:
+**     hapticapi.c
+**
+** Description:
+**     C API for DRV2605
+**
 ** =============================================================================
 */
+
 /**
  * \file
  *
  * This file contains the implementation of the Haptic C API.
  *
- * \version 1.0.10.0
  */
 
 /* Haptic API/Transport includes */
@@ -35,8 +55,8 @@
 #define HAPTIC_STATE_NOT_INITIALIZED            0
 
 /* Chip Type */
-#define DRV2605 5
-#define DRV2604 4
+#define TYPE_DRV2605 5
+#define TYPE_DRV2604 4
 
 /* Diagnostic Result */
 #define DIAGNOSTIC_PASSED 0
@@ -54,6 +74,14 @@ static HapticInt            sAPIState           = HAPTIC_STATE_NOT_INITIALIZED;
 /* Inter-thread sychronization mutex. */
 static HapticThreadMutex    sAPIMutex           = HAPTIC_INVALID_THREAD_MUTEX;
 
+/*
+** -----------------------------------------------------------------------------
+** Private Functions
+** -----------------------------------------------------------------------------
+*/
+
+HapticResult ImHapticLockAPI();
+HapticResult ImHapticUnlockAPI();
 
 /*
 ** -----------------------------------------------------------------------------
@@ -195,7 +223,7 @@ HapticResult HAPTICAPI_CALL ImHapticTerminate()
         {
             retVal = retVal2;
         }
-        
+
         /*
         ** Set the API state to HAPTIC_NOT_INITIALIZED even if there was an
         ** error. We don't want to leave the API in a half-initialized state.
@@ -221,18 +249,6 @@ HapticResult HAPTICAPI_CALL ImHapticTerminate()
 
 HapticResult HAPTICAPI_CALL ImHapticPlayEffect(HapticInt effectIndex)
 {
-    HapticResult    retVal; /* Initialized below. */
-
-    /* Make sure the API is initialized. */
-    retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-    if (HAPTIC_FAILED(retVal))
-    {
-        return retVal;
-    }
-    if (HAPTIC_S_TRUE != retVal)
-    {
-        return HAPTIC_E_NOT_INITIALIZED;
-    }
 
     /*
     ** Check argument.
@@ -243,26 +259,22 @@ HapticResult HAPTICAPI_CALL ImHapticPlayEffect(HapticInt effectIndex)
         return HAPTIC_E_ARGUMENT;
     }
 
-    /* Lock the API from other threads of the same process. */
-    retVal = ImTransportAcquireThreadMutex(sAPIMutex);
+    HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2; /* Initialized below. */
+
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
+    {
+        return retVal;
+    }
+
+    char cmd[2] = { HAPTIC_CMDID_PLAY_SINGLE_EFFECT, 0xFF & effectIndex };
+    retVal = ImTransportWrite(cmd, 2);
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
     if (HAPTIC_SUCCEEDED(retVal))
     {
-        HapticResult    retVal2;    /* Initialized below. */
-
-        /* Make sure the API is still initialized. */
-        retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-          char cmd[2] = { HAPTIC_CMDID_PLAY_SINGLE_EFFECT, 0xFF & effectIndex };
-          retVal = ImTransportWrite(cmd, 2);
-        }
-
-        /* Unlock the API. */
-        retVal2 = ImTransportReleaseThreadMutex(sAPIMutex);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-            retVal = retVal2;
-        }
+        retVal = retVal2;
     }
 
     return retVal;
@@ -270,18 +282,6 @@ HapticResult HAPTICAPI_CALL ImHapticPlayEffect(HapticInt effectIndex)
 
 HapticResult HAPTICAPI_CALL ImHapticPlayTimedEffect(HapticInt effectDuration)
 {
-    HapticResult    retVal; /* Initialized below. */
-
-    /* Make sure the API is initialized. */
-    retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-    if (HAPTIC_FAILED(retVal))
-    {
-        return retVal;
-    }
-    if (HAPTIC_S_TRUE != retVal)
-    {
-        return HAPTIC_E_NOT_INITIALIZED;
-    }
 
     /*
     ** Check argument.
@@ -291,30 +291,27 @@ HapticResult HAPTICAPI_CALL ImHapticPlayTimedEffect(HapticInt effectDuration)
         return HAPTIC_E_ARGUMENT;
     }
 
-    /* Lock the API from other threads of the same process. */
-    retVal = ImTransportAcquireThreadMutex(sAPIMutex);
+    HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2; /* Initialized below. */
+
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
+    {
+        return retVal;
+    }
+
+    char cmd[3] = { 0 };
+    cmd[0] = HAPTIC_CMDID_PLAY_TIMED_EFFECT;
+    cmd[1] = 0xFF & effectDuration;
+    effectDuration >>= 8;
+    cmd[2] = 0xFF & effectDuration;
+
+    retVal += ImTransportWrite(cmd, sizeof(cmd));
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
     if (HAPTIC_SUCCEEDED(retVal))
     {
-        HapticResult    retVal2;    /* Initialized below. */
-
-        /* Make sure the API is still initialized. */
-        retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-        if (HAPTIC_SUCCEEDED(retVal) && effectDuration > 0)
-        {
-            char cmd[3] = { 0 };
-            cmd[0] = HAPTIC_CMDID_PLAY_TIMED_EFFECT;
-            cmd[1] = 0xFF & effectDuration;
-            effectDuration >>= 8;
-            cmd[2] = 0xFF & effectDuration;
-
-            retVal += ImTransportWrite(cmd, sizeof(cmd));
-        }
-        /* Unlock the API. */
-        retVal2 = ImTransportReleaseThreadMutex(sAPIMutex);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-            retVal = retVal2;
-        }
+        retVal = retVal2;
     }
 
     return retVal;
@@ -327,17 +324,7 @@ HapticResult HAPTICAPI_CALL ImHapticPlayEffectSequence(
 {
     HapticSize      i;      /* Initialized below. */
     HapticResult    retVal; /* Initialized below. */
-
-    /* Make sure the API is initialized. */
-    retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-    if (HAPTIC_FAILED(retVal))
-    {
-        return retVal;
-    }
-    if (HAPTIC_S_TRUE != retVal)
-    {
-        return HAPTIC_E_NOT_INITIALIZED;
-    }
+    HapticResult    retVal2; /* Initialized below. */
 
     /*
     ** Check arguments.
@@ -351,31 +338,24 @@ HapticResult HAPTICAPI_CALL ImHapticPlayEffectSequence(
         return HAPTIC_E_ARGUMENT;
     }
 
-    /* Lock the API from other threads of the same process. */
-    retVal = ImTransportAcquireThreadMutex(sAPIMutex);
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
+    {
+        return retVal;
+    }
+
+    // TODO: implement using ioctl
+    char *data = (char*) calloc(bufferSize + 1, sizeof(char));
+    data[0] = HAPTIC_CMDID_PLAY_EFFECT_SEQUENCE;
+    memcpy(&data[1], buffer, bufferSize);
+
+    retVal = ImTransportWrite(data, bufferSize + 1);
+    free(data);
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
     if (HAPTIC_SUCCEEDED(retVal))
     {
-        HapticResult    retVal2;    /* Initialized below. */
-
-        /* Make sure the API is still initialized. */
-        retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-          // TODO: implement using ioctl
-          char *data = (char*) calloc(bufferSize + 1, sizeof(char));
-          data[0] = HAPTIC_CMDID_PLAY_EFFECT_SEQUENCE;
-          memcpy(&data[1], buffer, bufferSize);
-
-          retVal = ImTransportWrite(data, bufferSize + 1);
-          free(data);
-        }
-
-        /* Unlock the API. */
-        retVal2 = ImTransportReleaseThreadMutex(sAPIMutex);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-            retVal = retVal2;
-        }
+        retVal = retVal2;
     }
 
     return retVal;
@@ -384,43 +364,26 @@ HapticResult HAPTICAPI_CALL ImHapticPlayEffectSequence(
 HapticResult HAPTICAPI_CALL ImHapticGetDevID(int *devid)
 {
     HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2; /* Initialized below. */
 
-    /* Make sure the API is initialized. */
-    retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-    if (HAPTIC_FAILED(retVal))
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
     {
         return retVal;
     }
-    if (HAPTIC_S_TRUE != retVal)
-    {
-        return HAPTIC_E_NOT_INITIALIZED;
-    }
 
-    /* Lock the API from other threads of the same process. */
-    retVal = ImTransportAcquireThreadMutex(sAPIMutex);
+    char cmd[] = { HAPTIC_CMDID_GET_DEV_ID };
+
+    retVal = ImTransportWrite(cmd, sizeof(cmd));
+    ImTransportRead(cmd, 1);
+
+    if (devid)
+        *devid = (cmd[0] >> 4);
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
     if (HAPTIC_SUCCEEDED(retVal))
     {
-        HapticResult    retVal2;    /* Initialized below. */
-
-        /* Make sure the API is still initialized. */
-        retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-          char cmd[] = { HAPTIC_CMDID_GET_DEV_ID };
-
-          retVal = ImTransportWrite(cmd, sizeof(cmd));
-	  ImTransportRead(cmd, 1);
-
-	  if (devid)
-	    *devid = (cmd[0] >> 4);
-        }
-
-        /* Unlock the API. */
-        retVal2 = ImTransportReleaseThreadMutex(sAPIMutex);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-            retVal = retVal2;
-        }
+        retVal = retVal2;
     }
 
     return retVal;
@@ -429,43 +392,28 @@ HapticResult HAPTICAPI_CALL ImHapticGetDevID(int *devid)
 HapticResult HAPTICAPI_CALL ImHapticGetChipRev(int *chip_rev)
 {
     HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2; /* Initialized below. */
 
-    /* Make sure the API is initialized. */
-    retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-    if (HAPTIC_FAILED(retVal))
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
     {
         return retVal;
     }
-    if (HAPTIC_S_TRUE != retVal)
+
+    char cmd[] = { HAPTIC_CMDID_GET_DEV_ID };
+
+    retVal = ImTransportWrite(cmd, sizeof(cmd));
+    ImTransportRead(cmd, 1);
+
+    if (chip_rev)
     {
-        return HAPTIC_E_NOT_INITIALIZED;
+        *chip_rev = (cmd[0] & SILICON_REVISION_MASK);
     }
 
-    /* Lock the API from other threads of the same process. */
-    retVal = ImTransportAcquireThreadMutex(sAPIMutex);
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
     if (HAPTIC_SUCCEEDED(retVal))
     {
-        HapticResult    retVal2;    /* Initialized below. */
-
-        /* Make sure the API is still initialized. */
-        retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-          char cmd[] = { HAPTIC_CMDID_GET_DEV_ID };
-
-          retVal = ImTransportWrite(cmd, sizeof(cmd));
-	  ImTransportRead(cmd, 1);
-
-	  if (chip_rev)
-	    *chip_rev = (cmd[0] & SILICON_REVISION_MASK);
-        }
-
-        /* Unlock the API. */
-        retVal2 = ImTransportReleaseThreadMutex(sAPIMutex);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-            retVal = retVal2;
-        }
+        retVal = retVal2;
     }
 
     return retVal;
@@ -474,43 +422,26 @@ HapticResult HAPTICAPI_CALL ImHapticGetChipRev(int *chip_rev)
 HapticResult HAPTICAPI_CALL ImHapticRunDiagnostic(int *result)
 {
     HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2; /* Initialized below. */
 
-    /* Make sure the API is initialized. */
-    retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-    if (HAPTIC_FAILED(retVal))
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
     {
         return retVal;
     }
-    if (HAPTIC_S_TRUE != retVal)
-    {
-        return HAPTIC_E_NOT_INITIALIZED;
-    }
 
-    /* Lock the API from other threads of the same process. */
-    retVal = ImTransportAcquireThreadMutex(sAPIMutex);
+    char cmd[] = { HAPTIC_CMDID_RUN_DIAG };
+
+    retVal = ImTransportWrite(cmd, sizeof(cmd));
+    ImTransportRead(cmd, sizeof(cmd));
+
+    if (result)
+        *result = cmd[0];
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
     if (HAPTIC_SUCCEEDED(retVal))
     {
-        HapticResult    retVal2;    /* Initialized below. */
-
-        /* Make sure the API is still initialized. */
-        retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-          char cmd[] = { HAPTIC_CMDID_RUN_DIAG };
-
-          retVal = ImTransportWrite(cmd, sizeof(cmd));
-	  ImTransportRead(cmd, sizeof(cmd));
-
-	  if (result)
-	    *result = cmd[0];
-        }
-
-        /* Unlock the API. */
-        retVal2 = ImTransportReleaseThreadMutex(sAPIMutex);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-            retVal = retVal2;
-        }
+        retVal = retVal2;
     }
 
     return retVal;
@@ -520,7 +451,105 @@ HapticResult HAPTICAPI_CALL ImHapticRunDiagnostic(int *result)
 HapticResult HAPTICAPI_CALL ImHapticStopPlayingEffect(void)
 {
     HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2; /* Initialized below. */
 
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
+    {
+        return retVal;
+    }
+
+    char cmd[] = { HAPTIC_CMDID_STOP };
+
+    retVal = ImTransportWrite(cmd, sizeof(cmd));
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
+    if (HAPTIC_SUCCEEDED(retVal))
+    {
+        retVal = retVal2;
+    }
+
+    return retVal;
+}
+
+HapticResult HAPTICAPI_CALL ImAudioHapticEnable()
+{
+    HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2; /* Initialized below. */
+
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
+    {
+        return retVal;
+    }
+
+    char cmd[] = { HAPTIC_CMDID_AUDIOHAPTIC_ENABLE };
+
+    retVal = ImTransportWrite(cmd, sizeof(cmd));
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
+    if (HAPTIC_SUCCEEDED(retVal))
+    {
+        retVal = retVal2;
+    }
+
+    return retVal;
+}
+
+HapticResult HAPTICAPI_CALL ImAudioHapticDisable()
+{
+    HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2; /* Initialized below. */
+
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
+    {
+        return retVal;
+    }
+
+    char cmd[] = { HAPTIC_CMDID_AUDIOHAPTIC_DISABLE };
+    retVal = ImTransportWrite(cmd, sizeof(cmd));
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
+    if (HAPTIC_SUCCEEDED(retVal))
+    {
+        retVal = retVal2;
+    }
+
+    return retVal;
+}
+
+HapticResult HAPTICAPI_CALL ImAudioHapticGetStatus(int *audioHapticStatus)
+{
+    HapticResult    retVal; /* Initialized below. */
+    HapticResult    retVal2;    /* Initialized below. */
+
+    if (HAPTIC_FAILED(retVal = ImHapticLockAPI()))
+    {
+        return retVal;
+    }
+
+    char cmd[] = { HAPTIC_CMDID_AUDIOHAPTIC_GETSTATUS };
+
+    retVal = ImTransportWrite(cmd, sizeof(cmd));
+    ImTransportRead(cmd, 1);
+
+    if (audioHapticStatus)
+        *audioHapticStatus = cmd[0];
+
+    /* Unlock the API. */
+    retVal2 = ImHapticUnlockAPI();
+    if (HAPTIC_SUCCEEDED(retVal))
+    {
+        retVal = retVal2;
+    }
+
+    return retVal;
+}
+
+HapticResult ImHapticLockAPI()
+{
+    HapticResult    retVal; /* Initialized below. */
     /* Make sure the API is initialized. */
     retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
     if (HAPTIC_FAILED(retVal))
@@ -536,24 +565,19 @@ HapticResult HAPTICAPI_CALL ImHapticStopPlayingEffect(void)
     retVal = ImTransportAcquireThreadMutex(sAPIMutex);
     if (HAPTIC_SUCCEEDED(retVal))
     {
-        HapticResult    retVal2;    /* Initialized below. */
-
         /* Make sure the API is still initialized. */
         retVal = ImTransportTestInt(&sAPIState, HAPTIC_STATE_INITIALIZED);
-        if (HAPTIC_SUCCEEDED(retVal))
+        if(HAPTIC_FAILED(retVal))
         {
-          char cmd[] = { HAPTIC_CMDID_STOP };
-
-          retVal = ImTransportWrite(cmd, sizeof(cmd));
-        }
-
-        /* Unlock the API. */
-        retVal2 = ImTransportReleaseThreadMutex(sAPIMutex);
-        if (HAPTIC_SUCCEEDED(retVal))
-        {
-            retVal = retVal2;
+            /* Unlock the API. */
+            ImHapticUnlockAPI();
         }
     }
-
     return retVal;
+}
+
+HapticResult ImHapticUnlockAPI()
+{
+    /* Unlock the API. */
+    return ImTransportReleaseThreadMutex(sAPIMutex);
 }

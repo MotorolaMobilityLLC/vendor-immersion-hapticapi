@@ -1,7 +1,20 @@
 /*
 ** =============================================================================
-** Copyright (c) 2010-2011 Immersion Corporation.  All rights reserved.
-**                         Immersion Corporation Confidential and Proprietary
+** Copyright (C) 2010-2012  Immersion Corporation.
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 **
 ** File:
 **     Haptic.java
@@ -307,4 +320,48 @@ public class Haptic
      * Returns 0 if diagnostic succeeds, 1 if fails
      */
     public static native int runDiagnostic();
+
+    /**
+     * Enables and disables audio-to-haptic feature of the chip
+     *
+     * @param   enable  Flag indicating whether to enable or disable the feature
+     *
+     * @throws  RuntimeException
+     *              The detail message of the exception may consist of the
+     *              following values:
+     *              <dl>
+     *                  <dt>"HAPTIC_E_INTERNAL"</dt>
+     *                  <dd>Internal error. Should not arise. Possibly due to a
+     *                      programming error in the Haptic Transport or Haptic
+     *                      C API.</dd>
+     *                  <dt>"HAPTIC_E_SYSTEM"</dt>
+     *                  <dd>System error. A system call returned an error.</dd>
+     *                  <dt>"HAPTIC_E_NOT_INITIALIZED"</dt>
+     *                  <dd>The application has not called
+     *                      {@link #initialize initialize}.</dd>
+     *              </dl>
+     */
+    public static native void setAudioHapticEnabled(boolean enable);
+
+    /**
+     * Checks whether audio-to-haptic feature of the chip is enabled
+     *
+     * @return   true if audio-to-haptic is enabled, false otherwise
+     *
+     * @throws  RuntimeException
+     *              The detail message of the exception may consist of the
+     *              following values:
+     *              <dl>
+     *                  <dt>"HAPTIC_E_INTERNAL"</dt>
+     *                  <dd>Internal error. Should not arise. Possibly due to a
+     *                      programming error in the Haptic Transport or Haptic
+     *                      C API.</dd>
+     *                  <dt>"HAPTIC_E_SYSTEM"</dt>
+     *                  <dd>System error. A system call returned an error.</dd>
+     *                  <dt>"HAPTIC_E_NOT_INITIALIZED"</dt>
+     *                  <dd>The application has not called
+     *                      {@link #initialize initialize}.</dd>
+     *              </dl>
+     */
+    public static native boolean isAudioHapticEnabled();
 }

@@ -1,9 +1,24 @@
 /*
 ** =============================================================================
-** Copyright (C) 2010-2011  Immersion Corporation. All rights reserved.
-**                          Immersion Corporation confidential and proprietary.
+** Copyright (C) 2010-2012  Immersion Corporation.
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+**
 ** =============================================================================
 */
+
 /**
  * \file
  *
@@ -317,6 +332,46 @@ HAPTICAPI_EXTERN HapticResult HAPTICAPI_CALL ImHapticPlayEffectSequence(
  *                          The Haptic C API is not installed on this device.
  */
 HAPTICAPI_EXTERN HapticResult HAPTICAPI_CALL ImHapticStopPlayingEffect();
+
+/**
+ * Enables audio-to-haptic feature of the chip
+ *
+ * \note        It is not an error to call ImAudioHapticEnable() even if
+ *              it is already enabled
+ *
+ * \retval      HAPTIC_S_OK No error.
+ * \retval      HAPTIC_E_INTERNAL
+ *                          Internal error. Should not arise. Possibly due to a
+ *                          programming error in the Haptic Transport or Haptic
+ *                          C API.
+ * \retval      HAPTIC_E_SYSTEM
+ *                          System error. A system call returned an error.
+ * \retval      HAPTIC_E_NOT_INITIALIZED
+ *                          The application has not called ImHapticInitialize().
+ * \retval      HAPTIC_E_UNSUPPORTED
+ *                          The Haptic C API is not installed on this device.
+ */
+HAPTICAPI_EXTERN HapticResult HAPTICAPI_CALL ImAudioHapticEnable();
+
+/**
+ * Disables audio-to-haptic feature of the chip
+ *
+ * \note        It is not an error to call ImAudioHapticDisable() even if
+ *              it is already disabled
+ *
+ * \retval      HAPTIC_S_OK No error.
+ * \retval      HAPTIC_E_INTERNAL
+ *                          Internal error. Should not arise. Possibly due to a
+ *                          programming error in the Haptic Transport or Haptic
+ *                          C API.
+ * \retval      HAPTIC_E_SYSTEM
+ *                          System error. A system call returned an error.
+ * \retval      HAPTIC_E_NOT_INITIALIZED
+ *                          The application has not called ImHapticInitialize().
+ * \retval      HAPTIC_E_UNSUPPORTED
+ *                          The Haptic C API is not installed on this device.
+ */
+HAPTICAPI_EXTERN HapticResult HAPTICAPI_CALL ImAudioHapticDisable();
 
 #ifdef __cplusplus
 }

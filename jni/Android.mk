@@ -14,8 +14,6 @@ LOCAL_SRC_FILES         := ../transport/atomic.c \
                            ../transport/threadmutex.c \
                            ../api/c/hapticapi.c
 
-LOCAL_LDLIBS            := -llog
-
 LOCAL_CFLAGS            := -D__linux__
 LOCAL_MODULE_TAGS		:= optional eng
 LOCAL_PRELINK_MODULE    := false
@@ -30,7 +28,6 @@ LOCAL_C_INCLUDES        := $(GLOBAL_INCLUDE)
 
 LOCAL_SRC_FILES         := ../api/c/hapticapi.c
 
-LOCAL_LDLIBS            := -llog
 LOCAL_MODULE_TAGS		:= optional eng
 LOCAL_STATIC_LIBRARIES  := libhaptictransport
 LOCAL_CFLAGS            := -D__linux__
@@ -46,7 +43,7 @@ LOCAL_C_INCLUDES        := $(GLOBAL_INCLUDE)
 
 LOCAL_SRC_FILES         := ../api/java/hapticjavaapi.c
 
-LOCAL_LDLIBS            := -L$(LOCAL_PATH)/../libs/armeabi/ -llog
+LOCAL_LDLIBS            := -L$(LOCAL_PATH)/../libs/armeabi/
 LOCAL_SHARED_LIBRARIES  := libhapticapi
 LOCAL_MODULE_TAGS		:= optional eng
 LOCAL_CFLAGS            := -D__linux__

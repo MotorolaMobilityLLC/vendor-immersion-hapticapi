@@ -1,7 +1,8 @@
 LOCAL_PATH := $(call my-dir)
 
 GLOBAL_INCLUDE := $(LOCAL_PATH)/../driver \
-                  $(LOCAL_PATH)/../include
+                  $(LOCAL_PATH)/../include \
+                  $(TOP)/system/core/include
 
 include $(CLEAR_VARS)
 
@@ -29,7 +30,7 @@ LOCAL_C_INCLUDES        := $(GLOBAL_INCLUDE)
 LOCAL_SRC_FILES         := ../api/c/hapticapi.c
 
 LOCAL_MODULE_TAGS		:= optional eng
-LOCAL_STATIC_LIBRARIES  := libhaptictransport
+LOCAL_STATIC_LIBRARIES  := libhaptictransport libcutils
 LOCAL_CFLAGS            := -D__linux__
 
 include $(BUILD_SHARED_LIBRARY)

@@ -30,6 +30,8 @@
 
 /* Haptic Transport includes */
 #include <haptictransport.h>
+// MOT, a18273, IKSWL-615
+#include <cutils/atomic.h>
 
 /* ------------------------------------------------------------------------- */
 /* AtomicTestAndSet                                                          */
@@ -49,7 +51,8 @@ HapticResult HAPTICTRANSPORT_CALL ImTransportTestAndSetInt(
     /*
     ** Perform the operation.
      */
-    if (__atomic_cmpxchg(testValue, setValue, destination) == 0)
+    // MOT, a18273, IKSWL-615
+    if (android_atomic_cmpxchg(testValue, setValue, destination) == 0)
     {
         return HAPTIC_S_TRUE;
     }
@@ -76,7 +79,8 @@ HapticResult HAPTICTRANSPORT_CALL ImTransportTestInt(
     /*
     ** Perform the operation.
      */
-    if (__atomic_cmpxchg(testValue, testValue, value) == 0)
+    // MOT, a18273, IKSWL-615
+    if (android_atomic_cmpxchg(testValue, testValue, value) == 0)
     {
         return HAPTIC_S_TRUE;
     }

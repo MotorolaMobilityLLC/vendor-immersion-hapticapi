@@ -34,6 +34,7 @@
 
 /* OS includes */ 
 #include <fcntl.h> /* O_RDWR */
+#include <unistd.h> /* open/read/write/close */
 
 #include <drv2605.h>
 
